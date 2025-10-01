@@ -1,0 +1,304 @@
+---
+title: "Interactive Data Visualization with Plotly"
+author: "Lukhanyiso Bvuma"
+date: "`r Sys.Date()`"
+output:
+  slidy_presentation:
+    theme: default
+    highlight: tango
+  ioslides_presentation:
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(plotly)
+library(dplyr)
+```
+
+## Welcome to Interactive Visualizations!
+
+**Date Created:** `r format(Sys.Date(), "%B %d, %Y")`
+
+This presentation showcases the power of Plotly for creating interactive, web-based visualizations in R.
+
+**What makes Plotly special?**
+
+- Hover for details
+- Zoom and pan
+- Click to filter
+- Download plots
+- Mobile-friendly
+
+---
+
+## Dataset: mtcars
+
+We'll explore the classic `mtcars` dataset with interactive plots.
+
+```{r data_preview}
+knitr::kable(head(mtcars, 5), caption = "Sample of mtcars dataset")
+```
+
+**Variables:**
+- `mpg`: Miles per gallon
+- `hp`: Horsepower  
+- `wt`: Weight (1000 lbs)
+- `cyl`: Number of cylinders
+
+---
+
+## Interactive Scatter Plot
+
+```{r scatter_plot, fig.width=9, fig.height=6}
+plot_ly(mtcars, 
+        x = ~wt, 
+        y = ~mpg,
+        type = "scatter",
+        mode = "markers",
+        color = ~factor(cyl),
+        size = ~hp,
+        text = ~paste("Car:", rownames(mtcars),
+                     "<br>MPG:", mpg,
+                     "<br>Weight:", wt,
+                     "<br>HP:", hp,
+                     "<br>Cylinders:", cyl),
+        hoverinfo = "text",
+        marker = list(opacity = 0.7,
+                     line = list(width = 1, color = "white"))) %>%
+  layout(title = "Fuel Efficiency vs Weight",
+         xaxis = list(title = "Weight (1000 lbs)"),
+         yaxis = list(title = "Miles per Gallon"),
+         legend = list(title = list(text = "Cylinders")))
+```
+
+**Try hovering over the points!** Notice the relationship between weight and fuel efficiency.
+
+---
+
+## 3D Interactive Plot
+
+```{r 3d_plot, fig.width=9, fig.height=7}
+plot_ly(mtcars, 
+        x = ~wt, 
+        y = ~hp, 
+        z = ~mpg,
+        type = "scatter3d",
+        mode = "markers",
+        color = ~factor(cyl),
+        size = ~disp,
+        text = ~rownames(mtcars),
+        marker = list(opacity = 0.8)) %>%
+  layout(title = "3D View: Weight, Horsepower & MPG",
+         scene = list(
+           xaxis = list(title = "Weight"),
+           yaxis = list(title = "Horsepower"),
+           zaxis = list(title = "MPG")
+         ))
+```
+
+**Try rotating the plot!** Click and drag to explore different angles.
+
+---
+
+## Box Plot: Distribution by Cylinders
+
+```{r box_plot, fig.width=9, fig.height=6}
+plot_ly(mtcars, 
+        x = ~factor(cyl), 
+        y = ~mpg,
+        type = "box",
+        color = ~factor(cyl),
+        boxpoints = "all",
+        jitter = 0.3,
+        pointpos = -1.8,
+        text = ~rownames(mtcars),
+        hoverinfo = "text+y") %>%
+  layout(title = "Fuel Efficiency by Number of Cylinders",
+         xaxis = list(title = "Number of Cylinders"),
+         yaxis = list(title = "Miles per Gallon"),
+         showlegend = FALSE)
+```
+
+**Insight:** Fewer cylinders generally mean better fuel efficiency.
+
+---
+
+## Bar Chart: Average MPG by Cylinder
+
+```{r bar_chart, fig.width=9, fig.height=6}
+mpg_by_cyl <- mtcars %>%
+  group_by(cyl) %>%
+  summarize(avg_mpg = mean(mpg),
+            count = n(),
+            .groups = "drop")
+
+plot_ly(mpg_by_cyl,
+        x = ~factor(cyl),
+        y = ~avg_mpg,
+        type = "bar",
+        text = ~paste("Avg MPG:", round(avg_mpg, 1),
+                     "<br>Count:", count),
+        hoverinfo = "text",
+        marker = list(color = c("#FF6B6B", "#4ECDC4", "#45B7D1"),
+                     line = list(width = 1.5, color = "white"))) %>%
+  layout(title = "Average Fuel Efficiency by Cylinder Count",
+         xaxis = list(title = "Number of Cylinders"),
+         yaxis = list(title = "Average MPG"))
+```
+
+---
+
+## Correlation Heatmap
+
+```{r heatmap, fig.width=9, fig.height=7}
+# Select numeric columns
+numeric_cols <- c("mpg", "cyl", "disp", "hp", "drat", "wt", "qsec")
+cor_matrix <- cor(mtcars[, numeric_cols])
+
+plot_ly(z = cor_matrix,
+        x = colnames(cor_matrix),
+        y = rownames(cor_matrix),
+        type = "heatmap",
+        colorscale = "RdBu",
+        zmid = 0,
+        text = round(cor_matrix, 2),
+        hovertemplate = "X: %{x}<br>Y: %{y}<br>Correlation: %{z:.2f}<extra></extra>") %>%
+  layout(title = "Correlation Matrix of Car Characteristics",
+         xaxis = list(title = ""),
+         yaxis = list(title = ""))
+```
+
+**Strong negative correlations** (blue) between weight/cylinders and fuel efficiency.
+
+---
+
+## Line Chart: Performance Comparison
+
+```{r line_chart, fig.width=9, fig.height=6}
+# Sort by weight for line chart
+mtcars_sorted <- mtcars %>%
+  arrange(wt) %>%
+  mutate(car_name = rownames(mtcars)[order(wt)])
+
+# Create separate traces for each cylinder count
+plot_ly() %>%
+  add_trace(data = filter(mtcars_sorted, cyl == 4),
+           x = ~wt, y = ~mpg,
+           type = "scatter", mode = "lines+markers",
+           name = "4 Cylinders",
+           line = list(width = 3),
+           marker = list(size = 8)) %>%
+  add_trace(data = filter(mtcars_sorted, cyl == 6),
+           x = ~wt, y = ~mpg,
+           type = "scatter", mode = "lines+markers",
+           name = "6 Cylinders",
+           line = list(width = 3),
+           marker = list(size = 8)) %>%
+  add_trace(data = filter(mtcars_sorted, cyl == 8),
+           x = ~wt, y = ~mpg,
+           type = "scatter", mode = "lines+markers",
+           name = "8 Cylinders",
+           line = list(width = 3),
+           marker = list(size = 8)) %>%
+  layout(title = "MPG Trends Across Weight Range",
+         xaxis = list(title = "Weight (1000 lbs)"),
+         yaxis = list(title = "Miles per Gallon"),
+         hovermode = "closest")
+```
+
+---
+
+## Animated Bubble Chart
+
+```{r animated_plot, fig.width=9, fig.height=6}
+# Create time series effect by ranking
+mtcars_anim <- mtcars %>%
+  mutate(car = rownames(mtcars),
+         frame = ntile(hp, 5))  # Create 5 frames based on HP
+
+plot_ly(mtcars_anim,
+        x = ~wt,
+        y = ~mpg,
+        size = ~hp,
+        color = ~factor(cyl),
+        frame = ~frame,
+        text = ~car,
+        hoverinfo = "text",
+        type = "scatter",
+        mode = "markers",
+        marker = list(sizemode = "diameter",
+                     opacity = 0.7)) %>%
+  layout(title = "Cars Appearing by Horsepower Range",
+         xaxis = list(title = "Weight (1000 lbs)", range = c(1, 6)),
+         yaxis = list(title = "MPG", range = c(10, 35))) %>%
+  animation_opts(frame = 1000, transition = 500, redraw = FALSE)
+```
+
+**Click play!** Watch how cars are distributed across the power spectrum.
+
+---
+
+## Key Takeaways
+
+**What we learned:**
+
+1. ✅ **Weight matters**: Heavier cars consume more fuel
+2. ✅ **Cylinders count**: More cylinders = less efficiency
+3. ✅ **Power trade-off**: High horsepower typically means lower MPG
+4. ✅ **Interactive is better**: Plotly makes data exploration intuitive
+
+**Why use Plotly?**
+
+- Professional-looking plots with minimal code
+- Interactivity engages your audience
+- Web-ready and shareable
+- Works seamlessly with R Markdown
+
+---
+
+## Resources & Next Steps
+
+**Learn More:**
+
+- 📚 [Official Plotly R Documentation](https://plotly.com/r/)
+- 📊 [Plotly R Graphing Library](https://plotly-r.com/)
+- 💡 [R Graph Gallery](https://www.r-graph-gallery.com/)
+
+**Try it yourself:**
+
+```r
+# Basic example
+library(plotly)
+plot_ly(data = iris,
+        x = ~Sepal.Length,
+        y = ~Petal.Length,
+        color = ~Species)
+```
+
+**Publishing options:**
+- GitHub Pages (free hosting)
+- RPubs (easy one-click publishing)
+- NeoCities (simple hosting)
+
+---
+
+## Thank You!
+
+<div style="text-align: center; padding: 50px;">
+
+**Presentation created on:** `r format(Sys.Date(), "%B %d, %Y")`
+
+**Tools used:**
+- R Markdown
+- Plotly for R
+- Slidy presentation format
+
+**All plots are interactive - hover, click, zoom, and explore!**
+
+---
+
+*Questions or feedback?*  
+*[Your Email] | [Your GitHub]*
+
+</div>
